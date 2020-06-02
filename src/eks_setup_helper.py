@@ -313,7 +313,7 @@ def inbound_eks_nlb_setup(deploy_stage, manifest_data):
             print("Created ServiceID: %s, ServiceName: %s, ServiceState: %s" % (svcID, svcName, svcState))
 
             # Create a VPC EndPoint Connection Notification
-            conn_notif_arn_parameter_key = "/{}-{}/{}/inbound-data-plane/vpce-sns-topic".format(
+            conn_notif_arn_parameter_key = "/{}-{}/{}/control-plane/inbound-vpce-sns-topic".format(
                 manifest_data["env_name"], manifest_data["region"], manifest_data["deployment_id"]
             )
             connNotifARN = awsClient.aws_ssm_fetch_parameter(parameter_name=conn_notif_arn_parameter_key)
