@@ -140,10 +140,11 @@ resource aws_codepipeline_webhook github_manifest {
 module pipeline_bucket {
   source            = "../modules/s3_bucket"
   tags              = var.tags
-  bucket_name       = "${local.resource_prefix}-pipeline"
+  bucket_name       = "sfdc-cni-${local.resource_prefix}-pipeline"
   region            = var.region
   admin_principals  = data.terraform_remote_state.region_base.outputs.admin_principals
   enable_mfa_delete = false
+  force_destroy     = true
 }
 
 ###############################
