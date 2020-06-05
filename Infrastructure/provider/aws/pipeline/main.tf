@@ -36,7 +36,8 @@ locals {
   git_token             = jsondecode(data.aws_secretsmanager_secret_version.github_oauth_token.secret_string)["GIT_PASSWORD"]
   unary_module_names    = ["stack_base", "control_plane", "monitoring", "inbound_data_plane"]
   data_plane_stage_name = "DataPlane"
-  tf_codebuild_environment_variables = [
+  tf_version            = "0.12.26"
+  common_codebuild_environment_variables = [
     {
       name  = "ENV_NAME"
       type  = "PLAINTEXT"
@@ -53,6 +54,13 @@ locals {
       value = module.pipeline_bucket.bucket.bucket
     }
   ]
+  tf_codebuild_environment_variables = concat(local.common_codebuild_environment_variables, [
+    {
+      name  = "TF_VERSION"
+      type  = "PLAINTEXT"
+      value = local.tf_version
+    }
+  ])
 }
 
 ###############################
@@ -380,7 +388,7 @@ resource aws_codepipeline stack {
 
       configuration = {
         ProjectName = aws_codebuild_project.data_plane_plan.name
-        EnvironmentVariables = jsonencode(concat(local.tf_codebuild_environment_variables, [
+        EnvironmentVariables = jsonencode(concat(local.common_codebuild_environment_variables, [
           {
             name  = "STAGE_NAME"
             type  = "PLAINTEXT"
@@ -414,7 +422,7 @@ resource aws_codepipeline stack {
 
       configuration = {
         ProjectName          = aws_codebuild_project.data_plane_apply.name
-        EnvironmentVariables = jsonencode(local.tf_codebuild_environment_variables)
+        EnvironmentVariables = jsonencode(local.common_codebuild_environment_variables)
       }
     }
   }

@@ -1,8 +1,6 @@
 version: 0.2
 
 env:
-  variables:
-   TF_VERSION: 0.12.25
   secrets-manager:
     GIT_USERNAME: SF-SDN-GIT-TOKEN:GIT_USERNAME
     GIT_PASSWORD: SF-SDN-GIT-TOKEN:GIT_PASSWORD
@@ -20,7 +18,7 @@ phases:
     commands:
       - cd cni-deployer
       - MANIFEST_PATH="$CODEBUILD_SRC_DIR/aws/$ENV_NAME/$MANIFEST_FILENAME"
-      - python Infrastructure/deployer/deployment_helper.py -c export_to_env -manifest "$MANIFEST_PATH"
+      - eval "$(python Infrastructure/deployer/deployment_helper.py -c export_to_env -manifest $MANIFEST_PATH)"
       - GIT_BRANCH="${TF_VAR_git_branch:-master}"
       - GIT_COMMIT="${TF_VAR_git_commit:-HEAD}"
       - git fetch origin "$GIT_BRANCH"
