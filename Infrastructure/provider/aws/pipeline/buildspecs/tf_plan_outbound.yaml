@@ -30,7 +30,7 @@ phases:
   build:
     commands:
       - MODULE_PATH="$CODEBUILD_SRC_DIR/cni-deployer/Infrastructure/provider/aws/$MODULE_NAME"
-      - vpc_suffixes=$(python "$DEPLOYER_PATH/deployment_helper.py" -c "get_outbound_vpc_suffixes" -manifest "$MANIFEST")
+      - vpc_suffixes=$(python Infrastructure/deployer/deployment_helper.py -c "get_outbound_vpc_suffixes" -manifest "$MANIFEST_PATH")
       - |
         for outbound_vpc_suffix in ${vpc_suffixes[@]}:
         do
