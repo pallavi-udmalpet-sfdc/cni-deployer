@@ -10,7 +10,7 @@ env:
 phases:
   install:
     runtime-versions:
-      python: 3.7
+      python: $PYTHON_VERSION
     commands:
       - apt install unzip -y
       - wget https://releases.hashicorp.com/terraform/"$TF_VERSION"/terraform_"$TF_VERSION"_linux_amd64.zip

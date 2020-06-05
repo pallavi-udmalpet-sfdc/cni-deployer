@@ -40,6 +40,7 @@ locals {
   outbound_module_name  = "outbound_data_plane"
   data_plane_stage_name = "all_data_planes"
   tf_version            = "0.12.26"
+  python_version        = "3.7"
   common_codebuild_environment_variables = [
     {
       name  = "ENV_NAME"
@@ -60,6 +61,11 @@ locals {
       name  = "PIPELINE_EXECUTION_ID"
       type  = "PLAINTEXT"
       value = "#{codepipeline.PipelineExecutionId}"
+    },
+    {
+      name  = "PYTHON_VERSION"
+      type  = "PLAINTEXT"
+      value = local.python_version
     }
   ]
   tf_codebuild_environment_variables = concat(local.common_codebuild_environment_variables, [
