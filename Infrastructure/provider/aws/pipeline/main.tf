@@ -35,6 +35,7 @@ locals {
   git_token_secret_id   = "SF-SDN-GIT-TOKEN"
   git_token             = jsondecode(data.aws_secretsmanager_secret_version.github_oauth_token.secret_string)["GIT_PASSWORD"]
   unary_module_names    = ["stack_base", "control_plane", "monitoring", "inbound_data_plane"]
+  outbound_module_name  = "outbound_control_plane"
   data_plane_stage_name = "DataPlane"
   tf_version            = "0.12.26"
   common_codebuild_environment_variables = [
@@ -207,7 +208,75 @@ resource aws_codebuild_project terraform_apply {
 }
 
 ###################################
-#  CodeBuild for EKS Dataplane Plan
+#  CodeBuild for Outbound TF Plan
+###################################
+
+resource aws_codebuild_project terraform_plan_outbound {
+  tags           = var.tags
+  name           = "${local.resource_prefix}-tf-plan-outbound"
+  service_role   = aws_iam_role.terraform_pipeline.arn
+  encryption_key = module.pipeline_bucket.bucket_key.arn
+  build_timeout  = local.plan_timeout
+  queued_timeout = local.plan_timeout
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  cache {
+    type     = "S3"
+    location = "${module.pipeline_bucket.bucket.bucket}/codebuild/cache/tf-plan-outbound"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:2.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = file("${path.module}/buildspecs/tf_plan_outbound.yaml")
+  }
+}
+
+###################################
+#  CodeBuild for Outbound TF Apply
+###################################
+
+resource aws_codebuild_project terraform_apply_outbound {
+  tags           = var.tags
+  name           = "${local.resource_prefix}-tf-apply-outbound"
+  service_role   = aws_iam_role.terraform_pipeline.arn
+  encryption_key = module.pipeline_bucket.bucket_key.arn
+  build_timeout  = local.apply_timeout
+  queued_timeout = local.apply_timeout
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  cache {
+    type     = "S3"
+    location = "${module.pipeline_bucket.bucket.bucket}/codebuild/cache/tf-apply-outbound"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:2.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = file("${path.module}/buildspecs/tf_apply_outbound.yaml")
+  }
+}
+
+###################################
+#  CodeBuild for Data Plane Plan
 ###################################
 
 resource aws_codebuild_project data_plane_plan {
@@ -235,9 +304,9 @@ resource aws_codebuild_project data_plane_plan {
   }
 }
 
-###############################
-#  CodeBuild for TF Apply
-###############################
+###################################
+#  CodeBuild for Data Plane Apply
+###################################
 
 resource aws_codebuild_project data_plane_apply {
   tags           = var.tags
@@ -368,6 +437,61 @@ resource aws_codepipeline stack {
             }
           ]))
         }
+      }
+    }
+  }
+
+  stage {
+    name = local.outbound_module_name
+
+    action {
+      name             = "DataPlanePlan"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["ManifestSource"]
+      output_artifacts = ["${local.outbound_module_name}_plan"]
+      version          = "1"
+      run_order        = "1"
+      namespace        = local.outbound_module_name
+
+      configuration = {
+        ProjectName = aws_codebuild_project.terraform_plan_outbound.name
+        EnvironmentVariables = jsonencode(concat(local.common_codebuild_environment_variables, [
+          {
+            name  = "STAGE_NAME"
+            type  = "PLAINTEXT"
+            value = local.outbound_module_name
+          }
+        ]))
+      }
+    }
+
+    action {
+      name      = "FirstApproval"
+      category  = "Approval"
+      owner     = "AWS"
+      provider  = "Manual"
+      version   = "1"
+      run_order = "2"
+      configuration = {
+        ExternalEntityLink = "#{${local.outbound_module_name}.PRESIGNED_PLAN_S3_URL}"
+      }
+    }
+
+    action {
+      name             = "DataPlaneApply"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["${local.outbound_module_name}_plan"]
+      output_artifacts = []
+      version          = "1"
+      run_order        = "3"
+
+      configuration = {
+        ProjectName          = aws_codebuild_project.terraform_apply_outbound.name
+        EnvironmentVariables = jsonencode(local.common_codebuild_environment_variables)
       }
     }
   }

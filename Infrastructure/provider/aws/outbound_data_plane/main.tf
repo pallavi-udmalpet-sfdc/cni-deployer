@@ -8,6 +8,7 @@ provider aws {
 
 locals {
   resource_prefix = "${var.env_name}-${var.region}-${var.deployment_id}-outbound-${var.vpc_suffix}"
+  tags            = merge(var.tags, {vpc_suffix: var.vpc_suffix})
   cluster_name    = "${local.resource_prefix}-data-plane"
   az_names        = slice(sort(data.aws_availability_zones.available.names), 0, var.az_count)
   /*
@@ -31,7 +32,7 @@ locals {
 
 module vpc {
   source                    = "../modules/vpc"
-  tags                      = var.tags
+  tags                      = local.tags
   vpc_name                  = local.resource_prefix
   vpc_cidr                  = local.vpc_cidr
   vpc_tags                  = { "kubernetes.io/cluster/${local.cluster_name}" : "shared" }
@@ -51,7 +52,7 @@ module vpc {
 module security_groups {
   source                     = "../modules/security_groups"
   resource_prefix            = local.resource_prefix
-  tags                       = var.tags
+  tags                       = local.tags
   vpc_id                     = module.vpc.vpc_id
   vpc_cidr                   = module.vpc.vpc_cidr
   sfdc_cidr_blocks           = var.sfdc_vpn_cidrs
@@ -67,7 +68,7 @@ module security_groups {
 module vpc_flow_log {
   source                 = "../modules/vpc_flow_log"
   resource_prefix        = local.resource_prefix
-  tags                   = var.tags
+  tags                   = local.tags
   vpc_id                 = module.vpc.vpc_id
   admin_principals       = data.terraform_remote_state.region_base.outputs.admin_principals
   flow_logs_iam_role_arn = data.terraform_remote_state.stack_base.outputs.iam.flow_logs_role.arn
@@ -81,7 +82,7 @@ module vpc_flow_log {
 module bastion {
   source                = "../modules/bastion"
   resource_prefix       = local.resource_prefix
-  tags                  = var.tags
+  tags                  = local.tags
   admin_principals      = data.terraform_remote_state.region_base.outputs.admin_principals
   autoscaling_group_arn = data.terraform_remote_state.stack_base.outputs.iam.bastion_autoscaling_group_role.arn
   subnet_ids            = module.vpc.public_subnet_ids
@@ -99,7 +100,7 @@ module bastion {
 
 module eks_cluster {
   source               = "../modules/eks_cluster"
-  tags                 = var.tags
+  tags                 = local.tags
   cluster_name         = local.cluster_name
   cluster_role_arn     = data.terraform_remote_state.stack_base.outputs.iam.data_plane_cluster_role.arn
   cluster_role_name    = data.terraform_remote_state.stack_base.outputs.iam.data_plane_cluster_role.name
@@ -123,7 +124,7 @@ module eks_cluster {
 }
 
 resource aws_ssm_parameter cluster_name {
-  tags        = var.tags
+  tags        = local.tags
   name        = format("/%s-%s/%s/outbound-data-plane/%s/cluster-name", var.env_name, var.region, var.deployment_id, var.vpc_suffix)
   type        = "SecureString"
   value       = module.eks_cluster.cluster.name
@@ -144,7 +145,7 @@ resource aws_ec2_transit_gateway_vpc_attachment tgw_attachment {
 module sitebridge_vpc_routing {
   source                       = "../modules/sitebridge_vpc_routing"
   enable_sitebridge            = var.enable_sitebridge
-  tags                         = var.tags
+  tags                         = local.tags
   resource_prefix              = local.resource_prefix
   vpc_id                       = module.vpc.vpc_id
   private_subnet_ids           = module.vpc.private_subnet_ids

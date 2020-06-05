@@ -65,7 +65,7 @@ python "$DEPLOYER_PATH/deploy.py" -c plan -module $MODULE_PATH/inbound_data_plan
 python "$DEPLOYER_PATH/deploy.py" -c apply -module $MODULE_PATH/inbound_data_plane -manifest "${MANIFEST}" -automation
 
 # Get list of all outbound VPC suffixes
-vpc_suffixes=`python "$DEPLOYER_PATH/deployment_helper.py" -c "get_outbound_vpc_suffixes" -manifest "${MANIFEST}"`
+vpc_suffixes=$(python "$DEPLOYER_PATH/deployment_helper.py" -c "get_outbound_vpc_suffixes" -manifest "$MANIFEST")
 
 
 for outbound_vpc_suffix in ${vpc_suffixes[@]};
