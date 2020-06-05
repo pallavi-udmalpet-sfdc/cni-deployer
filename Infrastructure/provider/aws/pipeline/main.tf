@@ -35,8 +35,10 @@ locals {
   git_token_secret_id   = "SF-SDN-GIT-TOKEN"
   git_token             = jsondecode(data.aws_secretsmanager_secret_version.github_oauth_token.secret_string)["GIT_PASSWORD"]
   unary_module_names    = ["stack_base", "control_plane", "monitoring", "inbound_data_plane"]
+  approval_count        = var.env_name == "prod" ? 2 : 1
+  approval_labels       = slice(["First", "Second"], 0, local.approval_count)
   outbound_module_name  = "outbound_data_plane"
-  data_plane_stage_name = "DataPlane"
+  data_plane_stage_name = "all_data_planes"
   tf_version            = "0.12.26"
   common_codebuild_environment_variables = [
     {
@@ -53,6 +55,11 @@ locals {
       name  = "PIPELINE_S3_BUCKET"
       type  = "PLAINTEXT"
       value = module.pipeline_bucket.bucket.bucket
+    },
+    {
+      name  = "PIPELINE_EXECUTION_ID"
+      type  = "PLAINTEXT"
+      value = "#{codepipeline.PipelineExecutionId}"
     }
   ]
   tf_codebuild_environment_variables = concat(local.common_codebuild_environment_variables, [
@@ -405,15 +412,19 @@ resource aws_codepipeline stack {
         }
       }
 
-      action {
-        name      = "FirstApproval"
-        category  = "Approval"
-        owner     = "AWS"
-        provider  = "Manual"
-        version   = "1"
-        run_order = "2"
-        configuration = {
-          ExternalEntityLink = "#{${stage.value}.PRESIGNED_PLAN_S3_URL}"
+      dynamic "action" {
+        for_each = local.approval_labels
+
+        content {
+          name      = "${action.value}Approval"
+          category  = "Approval"
+          owner     = "AWS"
+          provider  = "Manual"
+          version   = "1"
+          run_order = "2"
+          configuration = {
+            ExternalEntityLink = "#{${stage.value}.PRESIGNED_PLAN_S3_URL}"
+          }
         }
       }
 
@@ -445,7 +456,7 @@ resource aws_codepipeline stack {
     name = local.outbound_module_name
 
     action {
-      name             = "DataPlanePlan"
+      name             = "TerraformPlan"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -472,20 +483,24 @@ resource aws_codepipeline stack {
       }
     }
 
-    action {
-      name      = "FirstApproval"
-      category  = "Approval"
-      owner     = "AWS"
-      provider  = "Manual"
-      version   = "1"
-      run_order = "2"
-      configuration = {
-        ExternalEntityLink = "#{${local.outbound_module_name}.PRESIGNED_PLAN_S3_URL}"
+    dynamic "action" {
+      for_each = local.approval_labels
+
+      content {
+        name      = "${action.value}Approval"
+        category  = "Approval"
+        owner     = "AWS"
+        provider  = "Manual"
+        version   = "1"
+        run_order = "2"
+        configuration = {
+          ExternalEntityLink = "#{${local.outbound_module_name}.PRESIGNED_PLAN_S3_URL}"
+        }
       }
     }
 
     action {
-      name             = "DataPlaneApply"
+      name             = "TerraformApply"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -511,7 +526,7 @@ resource aws_codepipeline stack {
     name = local.data_plane_stage_name
 
     action {
-      name             = "DataPlanePlan"
+      name             = "KubePlan"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -533,20 +548,24 @@ resource aws_codepipeline stack {
       }
     }
 
-    action {
-      name      = "FirstApproval"
-      category  = "Approval"
-      owner     = "AWS"
-      provider  = "Manual"
-      version   = "1"
-      run_order = "2"
-      configuration = {
-        ExternalEntityLink = "#{${local.data_plane_stage_name}.PRESIGNED_PLAN_S3_URL}"
+    dynamic "action" {
+      for_each = local.approval_labels
+
+      content {
+        name      = "${action.value}Approval"
+        category  = "Approval"
+        owner     = "AWS"
+        provider  = "Manual"
+        version   = "1"
+        run_order = "2"
+        configuration = {
+          ExternalEntityLink = "#{${local.data_plane_stage_name}.PRESIGNED_PLAN_S3_URL}"
+        }
       }
     }
 
     action {
-      name             = "DataPlaneApply"
+      name             = "KubeApply"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"

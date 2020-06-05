@@ -35,7 +35,7 @@ phases:
       - terraform show -no-color terraform_plan >> plan.txt
   post_build:
     commands:
-      - PLAN_S3_PATH="s3://$PIPELINE_S3_BUCKET/stage_output/$STAGE_NAME/plan.txt"
+      - PLAN_S3_PATH="s3://$PIPELINE_S3_BUCKET/stage_output/$PIPELINE_EXECUTION_ID/$STAGE_NAME/plan.txt"
       - aws s3 cp plan.txt "$PLAN_S3_PATH"
       - aws configure set default.s3.signature_version s3v4
       - PRESIGNED_PLAN_S3_URL=$(aws s3 presign "$PLAN_S3_PATH" --expires-in 3600)
