@@ -72,8 +72,6 @@ for outbound_vpc_suffix in $VPC_SUFFIX_LIST;
 do
   python "$DEPLOYER_PATH/deploy.py" -c plan -module $MODULE_PATH/outbound_data_plane -manifest "${MANIFEST}" -automation  -manifest_override "{ \"vpc_suffix\": \"$outbound_vpc_suffix\"}"
   python "$DEPLOYER_PATH/deploy.py" -c apply -module $MODULE_PATH/outbound_data_plane -manifest "${MANIFEST}" -automation  -manifest_override "{ \"vpc_suffix\": \"$outbound_vpc_suffix\"}"
-  terraform show -no-color terraform_plan_"${outbound_vpc_suffix}" >> plan.txt
-
 done
 
 # generate k8s files using helm
