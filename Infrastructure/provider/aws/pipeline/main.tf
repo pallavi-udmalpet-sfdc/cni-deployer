@@ -457,7 +457,12 @@ resource aws_codepipeline stack {
 
       configuration = {
         ProjectName = aws_codebuild_project.terraform_plan_outbound.name
-        EnvironmentVariables = jsonencode(concat(local.common_codebuild_environment_variables, [
+        EnvironmentVariables = jsonencode(concat(local.tf_codebuild_environment_variables, [
+          {
+            name  = "MODULE_NAME"
+            type  = "PLAINTEXT"
+            value = local.outbound_module_name
+          },
           {
             name  = "STAGE_NAME"
             type  = "PLAINTEXT"
@@ -491,7 +496,13 @@ resource aws_codepipeline stack {
 
       configuration = {
         ProjectName          = aws_codebuild_project.terraform_apply_outbound.name
-        EnvironmentVariables = jsonencode(local.common_codebuild_environment_variables)
+        EnvironmentVariables = jsonencode(concat(local.tf_codebuild_environment_variables, [
+          {
+            name  = "MODULE_NAME"
+            type  = "PLAINTEXT"
+            value = local.outbound_module_name
+          }
+        ]))
       }
     }
   }
