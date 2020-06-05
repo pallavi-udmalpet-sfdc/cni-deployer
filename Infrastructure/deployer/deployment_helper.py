@@ -13,7 +13,7 @@ def export_to_environment(manifest_file_path):
 
 def get_outbound_vpc_suffixes(manifest_file_path):
     manifest = common.load_yaml(manifest_file_path)
-    for vpc_suffix in [str(vpc_suffix) for vpc_suffix in manifest['outbound_vpcs_config'].keys()]:
+    for vpc_suffix in manifest['outbound_vpcs_config'].keys():
         print(vpc_suffix)
 
 
