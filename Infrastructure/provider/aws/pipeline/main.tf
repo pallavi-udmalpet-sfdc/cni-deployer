@@ -533,7 +533,7 @@ resource aws_codepipeline stack {
     name = local.data_plane_stage_name
 
     action {
-      name             = "KubePlan"
+      name             = "DataPlanePlan"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
@@ -572,7 +572,7 @@ resource aws_codepipeline stack {
     }
 
     action {
-      name             = "KubeApply"
+      name             = "DataPlaneApply"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
