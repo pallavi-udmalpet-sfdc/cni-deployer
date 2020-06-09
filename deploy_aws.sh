@@ -103,3 +103,4 @@ python "${DEPLOYER_PATH}/deploy.py" -c apply -module $MODULE_PATH/control_plane 
 
 python "${DEPLOYER_PATH}/deploy.py" -c plan -module $MODULE_PATH/monitoring -manifest "${MANIFEST}" -automation
 python "${DEPLOYER_PATH}/deploy.py" -c apply -module $MODULE_PATH/monitoring -manifest "${MANIFEST}" -automation
+
