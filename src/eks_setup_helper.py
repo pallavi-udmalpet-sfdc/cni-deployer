@@ -313,7 +313,7 @@ def inbound_eks_nlb_setup(deploy_stage, manifest_data):
             print("Created ServiceID: %s, ServiceName: %s, ServiceState: %s" % (svcID, svcName, svcState))
 
             # Create a VPC EndPoint Connection Notification
-            conn_notif_arn_parameter_key = "/{}-{}/{}/inbound-data-plane/vpce-sns-topic".format(
+            conn_notif_arn_parameter_key = "/{}-{}/{}/control-plane/inbound-vpce-sns-topic".format(
                 manifest_data["env_name"], manifest_data["region"], manifest_data["deployment_id"]
             )
             connNotifARN = awsClient.aws_ssm_fetch_parameter(parameter_name=conn_notif_arn_parameter_key)
@@ -365,7 +365,7 @@ def outbound_eks_nlb_setup(deploy_stage, manifest_data):
         pprint(awsClient.aws_ddb_scan_table(table_name=outbound_cfg_settings_tbl_name))
     elif deploy_stage == "setup":
         # Fetch SFDCSB.NET Hosted ZOne -ID from AWS SSM
-        r53_parameter_key = "/{}-{}/{}/stack_base/r53/sfdcsb".format(
+        r53_parameter_key = "/{}-{}/{}/stack-base/sfdcsb/zone/id".format(
             manifest_data["env_name"], manifest_data["region"], manifest_data["deployment_id"]
         )
         zone_id = awsClient.aws_ssm_fetch_parameter(parameter_name=r53_parameter_key)
@@ -403,7 +403,7 @@ def outbound_eks_nlb_setup(deploy_stage, manifest_data):
                 )
 
                 # Add CNAME Records for OUTBOUND EKS NLB NAMES IN SFDCSB.NET Zone
-                if not manifest_data["enable_sitebridge"]:
+                if "enable_sitebridge" in manifest_data:
                     print("********** OUTBOUND EKS NLB DNS SETUP ***********")
                     dns_name = "core-{}.{}.aws.{}.cni{}.sfdcsb.net".format(
                         vpc_suffix, manifest_data["env_name"], manifest_data["region"], manifest_data["env_name"]
@@ -439,12 +439,12 @@ def outbound_eks_nlb_setup(deploy_stage, manifest_data):
                 infra_vpc_info["security_group_ids"] = sg_list
                 infra_vpc_info["status"] = "inService"
                 infra_vpc_info["total_capacity"] = 500
-                if not manifest_data["enable_sitebridge"]:
-                    infra_vpc_info["proxy_url"] = "https://{}:443".format(nlb_name)
-                else:
+                if "enable_sitebridge" in manifest_data:
                     infra_vpc_info["proxy_url"] = "https://core-{}.{}.aws.{}.cni{}.sfdcsb.net:443".format(
                         vpc_suffix, manifest_data["env_name"], manifest_data["region"], manifest_data["env_name"]
                     )
+                else:
+                    infra_vpc_info["proxy_url"] = "https://{}:443".format(nlb_name)
                 outbound_infra_vpcs_info.append(infra_vpc_info)
             print("******** OUTBOUND INFRA VPC'S DDB SETUP *********")
             outbound_ddb_item = {"id": {"S": "infra_vpcs"}, "Payload": {"S": json.dumps(outbound_infra_vpcs_info)}}
